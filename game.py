@@ -20,20 +20,20 @@ hero.direction = 'right'
 
 platforms = [
     # Ground layer
-    Rect((0, 580), (800, 20)),
+    (Rect((0, 580), (800, 20)), "ground"),
     
-    Rect((100, 480), (50, 50)),
+    (Rect((100, 480), (50, 50)), "alone"),
     
     # Upper left structure
-    Rect((200, 420), (50, 50)),
-    Rect((250, 420), (50, 50)),
-    Rect((300, 420), (50, 50)),
-    Rect((350, 420), (50, 50)),
-    Rect((400, 370), (50, 50)),
+    (Rect((200, 420), (50, 50)), "left"),
+    (Rect((250, 420), (50, 50)), "mid"),
+    (Rect((300, 420), (50, 50)), "right"),
+    (Rect((350, 420), (50, 50)), "alone"),
+    (Rect((400, 370), (50, 50)), "alone"),
     
-    # Mid right floating platforms (above the spikes in image)
-    Rect((525, 380), (50, 50)),
-    Rect((600, 470), (50, 50)),
+    # Mid right floating platforms
+    (Rect((525, 380), (50, 50)), "alone"),
+    (Rect((600, 470), (50, 50)), "alone"),
     
 ]
 
@@ -74,8 +74,8 @@ start_button = Rect((300, 200), (200, 50))
 exit_button = Rect((300, 300), (200, 50))
 sound_button = Rect((300, 400), (200, 50))
 
-# if music_on:
-#     music.play('bg_music')
+if music_on:
+    music.play('bg_music')
 
 def update():
     global menu_active, game_active, frame, frame_counter
@@ -99,6 +99,8 @@ def update():
         if keys.up and hero.on_ground:
             hero.vy = -10
             hero.on_ground = False
+            if sound_on:
+                sounds.jump.play()
 
         hero.vy += 0.5
         if hero.vy > 10:
@@ -107,7 +109,7 @@ def update():
         hero.x += hero.vx
         hero.y += hero.vy
 
-        for plat in platforms:
+        for plat, _ in platforms:
             if hero.colliderect(plat) and hero.vy >= 0:
                 hero.y = plat.top - hero.height / 2
                 hero.vy = 0
@@ -132,9 +134,7 @@ def update():
                     enemies.remove(enemy)
                     continue
             if not hasattr(enemy, 'dead') or not enemy.dead:
-                # Enemy logic
                 if hasattr(enemy, 'patrol_min_x') and hasattr(enemy, 'patrol_max_x'):
-                    # Patrolling enemy
                     if enemy.direction == 'right':
                         enemy.x += 1
                         if enemy.x >= enemy.patrol_max_x:
@@ -144,7 +144,6 @@ def update():
                         if enemy.x <= enemy.patrol_min_x:
                             enemy.direction = 'right'
                 else:
-                    # Regular enemy moves left
                     enemy.x -= 1
                     enemy.direction = 'left'
 
@@ -160,12 +159,15 @@ def update():
                 enemy.dead = True
                 enemy.death_timer = 20
                 hero.vy = -7
+                if sound_on:
+                    sounds.stomp.play()
             elif enemy_hitbox.colliderect(hero_hitbox):
                 game_over()
 
 
 def draw():
     screen.clear()
+    screen.blit("background", (0, 0))
     if win_active:
         screen.draw.text("You Win!", center=(WIDTH/2, HEIGHT/2), fontsize=60, color="yellow")
         return
@@ -179,8 +181,20 @@ def draw():
         sound_text = "Sound: ON" if sound_on else "Sound: OFF"
         screen.draw.text(sound_text, center=sound_button.center, fontsize=30)
     else:
-        for plat in platforms:
-            screen.draw.filled_rect(plat, "brown")
+        for plat, kind in platforms:
+            if kind == "ground":
+                for x in range(0, WIDTH, 50):
+                    screen.blit("ground_tile", (x, plat.top))
+            elif kind == "alone":
+                screen.blit("grass_alone", (plat.left, plat.top))
+            elif kind == "left":
+                screen.blit("grass_left", (plat.left, plat.top))
+            elif kind == "mid":
+                screen.blit("grass_mid", (plat.left, plat.top))
+            elif kind == "right":
+                screen.blit("grass_right", (plat.left, plat.top))
+
+
 
         hero.draw()
         goal.draw()
@@ -208,6 +222,8 @@ def game_win():
     game_active = False
     win_active = True
     menu_active = False
+    if sound_on:
+        sounds.win.play()
 
 def game_over():
     global menu_active, game_active
